@@ -97,11 +97,16 @@ public class StateMachine{
     private State currentState;
 
     public StateMachine(){
+
+        State GroundedState = new State(-9.8f, 10,1,10,StateType.Grounded);
+        State InAirState = new State(-9.8f, 5, 1, 0, StateType.InAir); 
+        State wallRideState = new State(-2.5f, 10, 0, 7.5f, StateType.wallRide);
         transitions = new Dictionary<Transition, State>{
-            {new Transition(new State(-9.8f, 10, 1, 5, StateType.Grounded), PlayerStatus.InAir), new State(-9.8f,5f, 1, 0, StateType.InAir)},
-            {new Transition(new State(-9.8f,5f, 1, 0, StateType.InAir), PlayerStatus.Grounded), new State(-9.8f, 10, 1, 5, StateType.Grounded)},
-            {new Transition(new State(-9.8f,5f, 1, 0, StateType.InAir), PlayerStatus.OnWall), new State(-2.5f, 10, 0, 5, StateType.wallRide)}
-            //{new Transition(new State(-9.8f,7.5f, 7.5f, 0, StateType.InAir), PlayerStatus.OnWall), new State(-2.5f, 10, 0, 5, StateType.wallRide)}        
+            {new Transition(GroundedState, PlayerStatus.InAir), InAirState},
+            {new Transition(InAirState, PlayerStatus.Grounded), GroundedState},
+            {new Transition(InAirState, PlayerStatus.OnWall), wallRideState},
+            {new Transition(wallRideState, PlayerStatus.OffWall), InAirState},
+            {new Transition(wallRideState, PlayerStatus.Grounded),  GroundedState }
         };
 
         currentState = new State(-9.8f,5f, 1, 0, StateType.InAir);
@@ -127,7 +132,8 @@ public class StateMachine{
 public enum StateType{
     InAir,
     Grounded,
-    wallRide
+    wallRide,
+    wallRideEnded
 }
 
 public enum PlayerStatus{
