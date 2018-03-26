@@ -98,9 +98,9 @@ public class StateMachine{
 
     public StateMachine(){
 
-        State GroundedState = new State(-9.8f, 10,1,10,StateType.Grounded);
-        State InAirState = new State(-9.8f, 5, 1, 0, StateType.InAir); 
-        State wallRideState = new State(-2.5f, 10, 0, 7.5f, StateType.wallRide);
+        State GroundedState = new State(-9.8f, 20,1,20,StateType.Grounded);
+        State InAirState = new State(-9.8f, 20, 0.5f, 0, StateType.InAir); 
+        State wallRideState = new State(-2.5f, 20, 0, 15, StateType.wallRide);
         transitions = new Dictionary<Transition, State>{
             {new Transition(GroundedState, PlayerStatus.InAir), InAirState},
             {new Transition(InAirState, PlayerStatus.Grounded), GroundedState},
@@ -109,7 +109,7 @@ public class StateMachine{
             {new Transition(wallRideState, PlayerStatus.Grounded),  GroundedState }
         };
 
-        currentState = new State(-9.8f,5f, 1, 0, StateType.InAir);
+        currentState = InAirState;
     }
 
     public State SwitchState(PlayerStatus status){
