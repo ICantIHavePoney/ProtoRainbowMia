@@ -98,18 +98,26 @@ public class StateMachine{
 
     public StateMachine(){
 
-        State GroundedState = new State(-9.8f, 20,1,20,StateType.Grounded);
-        State InAirState = new State(-9.8f, 20, 0.5f, 0, StateType.InAir); 
+        State groundedState = new State(-9.8f, 20,1,20,StateType.grounded);
+        State inAirState = new State(-9.8f, 20, 0.5f, 0, StateType.inAir); 
         State wallRideState = new State(-2.5f, 20, 0, 15, StateType.wallRide);
+        State boostState = new State(-9.8f, 40, 1, 10, StateType.boost);
         transitions = new Dictionary<Transition, State>{
-            {new Transition(GroundedState, PlayerStatus.InAir), InAirState},
-            {new Transition(InAirState, PlayerStatus.Grounded), GroundedState},
-            {new Transition(InAirState, PlayerStatus.OnWall), wallRideState},
-            {new Transition(wallRideState, PlayerStatus.OffWall), InAirState},
-            {new Transition(wallRideState, PlayerStatus.Grounded),  GroundedState }
+
+            {new Transition(groundedState, PlayerStatus.InAir), inAirState},
+            {new Transition(groundedState, PlayerStatus.Sprint), boostState},
+
+            {new Transition(boostState, PlayerStatus.Grounded), groundedState},
+
+            {new Transition(inAirState, PlayerStatus.Sprint), boostState},
+            {new Transition(inAirState, PlayerStatus.Grounded), groundedState},
+            {new Transition(inAirState, PlayerStatus.OnWall), wallRideState},
+            
+            {new Transition(wallRideState, PlayerStatus.OffWall), inAirState},
+            {new Transition(wallRideState, PlayerStatus.Grounded),  groundedState}
         };
 
-        currentState = InAirState;
+        currentState = inAirState;
     }
 
     public State SwitchState(PlayerStatus status){
@@ -120,6 +128,7 @@ public class StateMachine{
         Debug.Log(status);
 
         if(!transitions.TryGetValue(new Transition(currentState, status), out nextState)){
+            Debug.LogWarning("Transition non trouvée");
             return currentState;
         }
         currentState = nextState;
@@ -130,10 +139,10 @@ public class StateMachine{
 
 
 public enum StateType{
-    InAir,
-    Grounded,
+    inAir,
+    grounded,
     wallRide,
-    wallRideEnded
+    boost
 }
 
 public enum PlayerStatus{
@@ -142,5 +151,6 @@ public enum PlayerStatus{
     Slide,
     SlideOff,
     OnWall,
-    OffWall	
+    OffWall,
+    Sprint
 }
