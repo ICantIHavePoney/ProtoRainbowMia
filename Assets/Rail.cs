@@ -60,7 +60,7 @@ public class Rail : MonoBehaviour {
 
 	private void OnDrawGizmos()
 	{
-		for(int i = 1; i < nodes.Length - 1; i++){
+		for(int i = 2; i < nodes.Length - 1; i++){
 			Handles.DrawDottedLine(nodes[i].position, nodes[i+1].position, 0.2f);
 		}
 	}

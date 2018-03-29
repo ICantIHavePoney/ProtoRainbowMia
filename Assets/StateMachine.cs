@@ -110,6 +110,7 @@ public class StateMachine{
         State inAirState = new State(-9.8f, 20, 0.5f, 0, StateType.inAir, true); 
         State wallRideState = new State(-2.5f, 20, 0, 15, StateType.wallRide, false);
         State boostState = new State(-9.8f, 40, 1, 10, StateType.boost, true);
+        State slideState = new State(0, 20, 0, 20, StateType.slide, false);
         transitions = new Dictionary<Transition, State>{
 
             {new Transition(groundedState, PlayerStatus.InAir), inAirState},
@@ -120,9 +121,12 @@ public class StateMachine{
             {new Transition(inAirState, PlayerStatus.Sprint), boostState},
             {new Transition(inAirState, PlayerStatus.Grounded), groundedState},
             {new Transition(inAirState, PlayerStatus.OnWall), wallRideState},
+            {new Transition(inAirState, PlayerStatus.Slide), slideState},
             
             {new Transition(wallRideState, PlayerStatus.OffWall), inAirState},
-            {new Transition(wallRideState, PlayerStatus.Grounded),  groundedState}
+            {new Transition(wallRideState, PlayerStatus.Grounded),  groundedState},
+
+            {new Transition(slideState, PlayerStatus.InAir), inAirState}
         };
 
         currentState = inAirState;
@@ -150,7 +154,8 @@ public enum StateType{
     inAir,
     grounded,
     wallRide,
-    boost
+    boost,
+    slide
 }
 
 public enum PlayerStatus{

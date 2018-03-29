@@ -10,8 +10,6 @@ public class PlayerController : MonoBehaviour {
 	[SerializeField]
 	private StateMachine stateMachine;
 
-	private RaycastHit hit;
-
 	[SerializeField]
 	private State currentState;
 
@@ -19,7 +17,7 @@ public class PlayerController : MonoBehaviour {
 	private State previousState;
 
 	[SerializeField]
-	private BoxCollider floorDetectionBox;
+	private Animator animator;
 
 	private Transform mainCam;
 
@@ -31,28 +29,39 @@ public class PlayerController : MonoBehaviour {
 
 	private Rail currentRail;
 
-	private bool isMoving;
+	public bool isMoving;
 
 	private bool canJump;
 
 	private bool isRiding;
 
+	private bool jumpEnded;
+
 	float startHeight = 0;
+
+	public float minHeightOffset;
+
+	public float maxHeightOffset;
 
 	public float angle = 0;
 
 	public float ratio = 0;
 
-	float endHeight;
+	public float minHeight;
+
+	public float endHeight;
+
+	float currentSpeed;
 
 	bool isJumping;
 
-	public AnimationCurve curve;
+	Vector3 newPos;
 
-	private Vector2 horizontalDrag;
+	Vector3 newRot;
 
 	// Use this for initialization
 	void Start () {
+		endHeight = 100000000000000f;
 		stateMachine = new StateMachine();
 		currentState = stateMachine.currentStateProperties;
 		cf = GetComponent<ConstantForce>();
@@ -64,50 +73,71 @@ public class PlayerController : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
 
-		if (Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0 && !isWallRiding){
+		if (Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0){
 			isMoving = true;
+			ratio += Time.deltaTime  * 0.4f;
+			if(ratio >= 1){
+				ratio = 1;
+			}
+					animator.SetBool("isMoving", true);
+			currentSpeed = Mathf.Lerp(0, currentState.GetForwardForce(), ratio);
+			newPos = transform.position + new Vector3(transform.forward.x, 0, transform.forward.z) * currentSpeed * Time.deltaTime;
+			newRot = new Vector3(0, mainCam.localEulerAngles.y + Mathf.Atan2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Mathf.Rad2Deg * currentState.GetLateralForce(), 0);
 		}
-		else if((Input.GetAxis("Horizontal") == 0 && Input.GetAxis("Vertical") == 0) || isWallRiding){
-			isMoving = false;
+		else if((Input.GetAxis("Horizontal") == 0 && Input.GetAxis("Vertical") == 0) && isMoving){
+			
+			
+			animator.SetBool("isMoving", false);
+			ratio -= Time.deltaTime  * 0.005f;
+		
+			if( ratio < 0.985f){
+				isMoving = false;
+				ratio = 0;
+			}
+			currentSpeed = Mathf.Lerp(1, currentSpeed, ratio);
+			newPos = transform.position + new Vector3(transform.forward.x, 0, transform.forward.z) * currentSpeed * Time.deltaTime;
+
 		}
 
-		if (Input.GetButtonDown("Jump") && !isJumping && canJump){
-				endHeight = transform.position.y + 10;
-				isJumping = true;
-				canJump = false;
+		animator.SetFloat("runVelocity", ratio);
+
+		if (Input.GetButtonDown("Jump") && canJump){
+			isJumping = true;
+			canJump = false;
+			animator.SetTrigger("Jump");
+			animator.SetBool("IsSmallJump", false);
+			animator.ResetTrigger("Landed");
+			minHeight = transform.position.y + minHeightOffset;
+			endHeight = transform.position.y + maxHeightOffset;
+
 		}
+
+		if(Input.GetButtonUp("Jump")){
+			if(transform.position.y < minHeight){
+				endHeight = minHeight;
+				animator.SetBool("IsSmallJump", true);
+			}
+		}
+
+
 
 
 		if(Input.GetButtonDown("Fire3")){
 			previousState = currentState;
 			currentState = stateMachine.SwitchState(PlayerStatus.Sprint);
+			animator.SetBool("isBoosting", true);
 		}
 
 
 		if(Input.GetButtonUp("Fire3")){
 			if(previousState.GetStateType() == StateType.grounded){
 				currentState = stateMachine.SwitchState(PlayerStatus.Grounded);
+				animator.SetBool("isBoosting", false);
 			}
 		}
 		
-				
-		if((int)(transform.position.y/endHeight * 100) >= 30){
-
-
-			rb.AddForce(Vector3.down * currentState.GetVerticalForce());
-		}
-
-		if((int)(transform.position.y/endHeight * 100) < 20 ){
-			rb.AddForce(Vector3.up);
-		}
-
-        if (currentState.GetStateType() == StateType.inAir && rb.velocity.y <0)
-        {
-            rb.AddForce(Vector3.down * rb.mass *.1f, ForceMode.Acceleration);
-        }
 
     }
-
 
 	void FixedUpdate()
 	{
@@ -137,7 +167,8 @@ public class PlayerController : MonoBehaviour {
                 }
                 else
                 {
-
+					rb.AddForce(transform.forward * currentState.GetForwardForce() * rb.mass, ForceMode.Impulse);
+					isJumping = true;
                     isRiding = false;
                 }
             }
@@ -152,35 +183,40 @@ public class PlayerController : MonoBehaviour {
                 }
                 else
                 {
-                    Debug.Log("toto");
                     isRiding = false;
-                }
+					rb.AddForce(transform.forward * currentState.GetForwardForce() * rb.mass, ForceMode.Impulse);
+					isJumping = true;
+				}
             }
             transform.position = newPos;
 
 		}
 
         if(isMoving && currentState.GetCanControl()){
-            transform.rotation = Quaternion.Euler(0, mainCam.localEulerAngles.y + Mathf.Atan2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Mathf.Rad2Deg * currentState.GetLateralForce(), 0);
-            rb.MovePosition(transform.position + new Vector3(transform.forward.x, 0, transform.forward.z) * currentState.GetForwardForce() * Time.deltaTime);
-        }
+
+            transform.rotation = Quaternion.Euler(newRot);
+            rb.MovePosition(newPos);
+		}
+
+
         if (isJumping)
         {
-            if (!isWallRiding)
-            {
-                rb.AddForce(Vector3.up * currentState.GetVerticalForce() * (rb.mass * 0.5f), ForceMode.Impulse);
-                currentState = stateMachine.SwitchState(PlayerStatus.InAir);
-            }
-            else
-            {
-                rb.velocity = Vector3.zero;
-                isWallRiding = false;
-                rb.AddForce(Vector3.up * currentState.GetVerticalForce() * rb.mass, ForceMode.Impulse);
-                currentState = stateMachine.SwitchState(PlayerStatus.OffWall);
-                cf.force = new Vector3(cf.force.x, currentState.GetGravity() * rb.mass, cf.force.z);
-            }
+			rb.AddForce(transform.up * currentState.GetVerticalForce() * (rb.mass * 0.30f), ForceMode.Impulse);			
+			cf.force = Vector3.zero;
+			currentState = stateMachine.SwitchState(PlayerStatus.InAir);
 			isJumping = false;
+
         }
+
+		if(transform.position.y / endHeight * 100f >= 80){
+			if(cf.force == Vector3.zero){
+				cf.force = Vector3.up * currentState.GetGravity() * rb.mass;
+			}
+			rb.AddForce(Vector3.down, ForceMode.Acceleration);
+		}
+		if(transform.position.y / endHeight * 100f >= 80 && endHeight != minHeight){
+			animator.SetTrigger("Fall");
+		}
 	}
 
 
@@ -198,6 +234,10 @@ public class PlayerController : MonoBehaviour {
                 cf.force = new Vector3(cf.force.x, currentState.GetGravity() * rb.mass, cf.force.z);
                 isWallRiding = false;
             }
+			animator.ResetTrigger("Jump");
+			animator.ResetTrigger("Fall");
+			animator.SetTrigger("Landed");
+			
 			canJump = true;
 		}
 		else if(other.transform.tag == "Wall" && currentState.GetStateType() == StateType.inAir){
@@ -214,8 +254,6 @@ public class PlayerController : MonoBehaviour {
 					transform.rotation = Quaternion.Inverse(other.transform.rotation);
 				}
 
-
-
 				cf.force = new Vector3(cf.force.x, currentState.GetGravity() * rb.mass, cf.force.z);
 
 				rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y * 0.25f, rb.velocity.z);
@@ -229,13 +267,11 @@ public class PlayerController : MonoBehaviour {
 
 			currentRail = other.transform.GetComponentInParent<Rail>();
 
-
-
-            //Debug.Break();
-
 			Vector3 distance = transform.position - other.transform.position;
 
             transform.position = other.transform.position + distance;
+
+			currentState = stateMachine.SwitchState(PlayerStatus.Slide);
 
             currentRail.SetRailSegment(transform);
 
@@ -255,17 +291,9 @@ public class PlayerController : MonoBehaviour {
                 transform.rotation = Quaternion.Inverse(other.transform.rotation);
 			}
 
-
             currentRail.currentSegment.distance = Vector3.Distance(currentRail.currentSegment.firstEndPoint.position, currentRail.currentSegment.secondEndPoint.position);
-            //Debug.Break();
 
             isRiding = true;
-
-
-
-
-
-
         }
 	}
 
