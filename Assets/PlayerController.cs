@@ -113,28 +113,54 @@ public class PlayerController : MonoBehaviour {
 	{
 
 		if(isRiding){
-			Debug.Log("toto");
-			if(angle < 0){
-				ratio -= Time.deltaTime * currentState.GetForwardForce() / currentRail.distance;
-			}
-			else{
-				ratio += Time.deltaTime * currentState.GetForwardForce() / currentRail.distance;
-			}
-			cf.force = Vector3.zero;
-			if(ratio > 1){
-				ratio = 0;
-				currentRail.currentSeg ++;
-			}
 
-			else if(ratio < 0){
-				ratio = 1;
-				currentRail.currentSeg --;
-			}
 
-			rb.MovePosition(currentRail.LerpPosition(ratio));
+            Vector3 newPos = Vector3.zero;
+            bool lastSegment = currentRail.Slide(out newPos, ratio, angle);
+            if (angle < 0)
+            {
+                ratio -= Time.deltaTime * currentState.GetForwardForce() / currentRail.currentSegment.distance;
+            }
+            else
+            {
+                ratio += Time.deltaTime * currentState.GetForwardForce() / currentRail.currentSegment.distance;
+            }
+
+            if(ratio > 1  && angle >= 0)
+            {
+                if (!lastSegment)
+                {
+                    ratio = 0;
+                    currentRail.currentSegmentIndex++;
+                    currentRail.SetRailSegment();
+                    transform.rotation = currentRail.currentSegment.firstEndPoint.rotation;
+                }
+                else
+                {
+
+                    isRiding = false;
+                }
+            }
+            if(ratio < 0  && angle < 0)
+            {
+                if (!lastSegment)
+                {
+                    ratio = 1;
+                    currentRail.currentSegmentIndex--;
+                    currentRail.SetRailSegment();
+                    transform.rotation = Quaternion.Inverse(currentRail.currentSegment.firstEndPoint.rotation);
+                }
+                else
+                {
+                    Debug.Log("toto");
+                    isRiding = false;
+                }
+            }
+            transform.position = newPos;
+
 		}
 
-        if(isMoving && !isWallRiding && !isRiding){
+        if(isMoving && currentState.GetCanControl()){
             transform.rotation = Quaternion.Euler(0, mainCam.localEulerAngles.y + Mathf.Atan2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Mathf.Rad2Deg * currentState.GetLateralForce(), 0);
             rb.MovePosition(transform.position + new Vector3(transform.forward.x, 0, transform.forward.z) * currentState.GetForwardForce() * Time.deltaTime);
         }
@@ -201,24 +227,46 @@ public class PlayerController : MonoBehaviour {
 		
 			angle = Vector3.Dot(transform.forward, other.transform.forward);
 
-			currentRail = other.transform.GetComponent<Rail>();
+			currentRail = other.transform.GetComponentInParent<Rail>();
 
-			isRiding = true;
+
+
+            //Debug.Break();
 
 			Vector3 distance = transform.position - other.transform.position;
 
-			if(angle > 0){
+            transform.position = other.transform.position + distance;
+
+            currentRail.SetRailSegment(transform);
+
+            cf.force = Vector3.zero;
+
+            if (angle >=  0){
+
+                currentRail.movable.position = transform.position;
+                currentRail.currentSegment.firstEndPoint = currentRail.movable;
+
 				transform.rotation = other.transform.rotation;
-				currentRail.SetDirection(transform.position);
 			}
 			else{
-				transform.rotation = Quaternion.Inverse(other.transform.rotation);
-				currentRail.SetDirection(transform.position);
+                ratio = 1;
+                currentRail.movable.position = transform.position;
+                currentRail.currentSegment.secondEndPoint = currentRail.movable;
+                transform.rotation = Quaternion.Inverse(other.transform.rotation);
 			}
 
 
-			transform.position = other.transform.position + distance;
-		}
+            currentRail.currentSegment.distance = Vector3.Distance(currentRail.currentSegment.firstEndPoint.position, currentRail.currentSegment.secondEndPoint.position);
+            //Debug.Break();
+
+            isRiding = true;
+
+
+
+
+
+
+        }
 	}
 
 

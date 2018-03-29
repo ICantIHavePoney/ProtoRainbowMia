@@ -17,13 +17,16 @@ public class State{
     private float verticalForce;
     [SerializeField]
     private StateType type;
+    [SerializeField]
+    private bool canControl;
 
-    public State(float g, float f, float l, float v, StateType t){
+    public State(float g, float f, float l, float v, StateType t, bool cC){
         gravity = g;
         forwardForce = f;
         lateralForce = l;
         verticalForce = v;
         type = t;
+        canControl = cC;
     }   
 
     public float GetGravity(){
@@ -45,6 +48,11 @@ public class State{
     public StateType GetStateType(){
 
         return type;
+    }
+
+    public bool GetCanControl()
+    {
+        return canControl;
     }
 
     public override int GetHashCode()
@@ -98,10 +106,10 @@ public class StateMachine{
 
     public StateMachine(){
 
-        State groundedState = new State(-9.8f, 20,1,20,StateType.grounded);
-        State inAirState = new State(-9.8f, 20, 0.5f, 0, StateType.inAir); 
-        State wallRideState = new State(-2.5f, 20, 0, 15, StateType.wallRide);
-        State boostState = new State(-9.8f, 40, 1, 10, StateType.boost);
+        State groundedState = new State(-9.8f, 20,1,20,StateType.grounded, true);
+        State inAirState = new State(-9.8f, 20, 0.5f, 0, StateType.inAir, true); 
+        State wallRideState = new State(-2.5f, 20, 0, 15, StateType.wallRide, false);
+        State boostState = new State(-9.8f, 40, 1, 10, StateType.boost, true);
         transitions = new Dictionary<Transition, State>{
 
             {new Transition(groundedState, PlayerStatus.InAir), inAirState},

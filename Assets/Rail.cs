@@ -2,30 +2,60 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+using System;
+
+[Serializable]
+public struct RailSegment
+{
+    public Transform firstEndPoint;
+
+    public Transform secondEndPoint;
+
+    public float distance;
+
+    public bool isFinal;
+
+    public RailSegment(Transform fEP, Transform sEP, float d, bool iF)
+    {
+        firstEndPoint = fEP;
+
+        secondEndPoint = sEP;
+
+        distance = d;
+
+        isFinal = iF;
+    }
+}
+
 
 [ExecuteInEditMode]
 public class Rail : MonoBehaviour {
 
 	public Transform[] nodes;
 
-	private Vector3 movingPoint;
+    public Transform nodesParent;
 
-	private Vector3 origin;
+    public List<RailSegment> segments;
 
-	private Vector3 endPoint;
+    public int currentSegmentIndex;
 
-	public int currentSeg;
+    public Transform movable;
 
-	public float distance;
-
+    public RailSegment currentSegment;
 
 	private void Start()
 	{
-		distance = 0;
-		nodes = GetComponentsInChildren<Transform>();
-		for(int i = 1; i < nodes.Length - 1; i++){
-			distance += Vector3.Distance(nodes[nodes.Length - 1].position, nodes[1].position);
-		}
+		nodes = nodesParent.GetComponentsInChildren<Transform>();
+
+        segments = new List<RailSegment>();
+
+        for (int i = 2; i < nodes.Length - 1; i++)
+        {     
+            segments.Add(new RailSegment(nodes[i], nodes[i + 1], Vector3.Distance(nodes[i].position, nodes[i + 1].position), i == 2 || i == nodes.Length -2));
+        }
+
+        movable = nodes[1];
+
 	}
 
 	private void OnDrawGizmos()
@@ -35,39 +65,43 @@ public class Rail : MonoBehaviour {
 		}
 	}
 
-	public void SetDirection(Vector3 position){
+    public void SetRailSegment(Transform position = null)
+    {
+        if (position)
+        {
+            for (int i = 0; i < segments.Count; i++)
+            {
+                if(segments[i].distance > Vector3.Distance(segments[i].firstEndPoint.position, position.position))
+                {
+                    currentSegmentIndex = i;
+                    currentSegment = segments[i];
+                    break;
+                }
+            }
+        }
+        else
+        {
+            currentSegment = segments[currentSegmentIndex];
+        }
+    }
 
-		movingPoint = position;
-		SetCurrentSeg();
-	}
+
+
+
+    public bool Slide(out Vector3 movingPoint, float ratio, float direction)
+    {
+        movingPoint = Vector3.Lerp(currentSegment.firstEndPoint.position, currentSegment.secondEndPoint.position , ratio);
+
+        if ((currentSegmentIndex == 0  && direction < 0)|| (currentSegmentIndex == segments.Count - 1 && direction >= 0))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 	
-	private void SetCurrentSeg(){
-
-		for(int i = 1; i < nodes.Length - 1; i++){
-			if(Vector3.Distance(nodes[i].position, movingPoint) < Vector3.Distance(nodes[i].position, nodes[i+1].position)){
-
-				currentSeg = i;
-				break;				
-
-			}
-		}
-	}
-
-
-
-
-	public bool LerpPosition(out Vector3 movingPoint, float ratio){
-
-		//Vector3 distance = nodes[currentSeg].position - movingPoint;
-
-		Vector3 p1 = nodes[currentSeg].position;
-		Vector3 p2 = nodes[currentSeg + 1].position;
-
-		movingPoint = Vector3.Lerp(p1, p2, ratio);
-
-		return false;
-
-	}
 
 
 	
