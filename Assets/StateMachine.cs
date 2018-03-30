@@ -128,7 +128,7 @@ public class StateMachine{
             {new Transition(inAirState, PlayerStatus.OnWall), wallRideState},
             {new Transition(inAirState, PlayerStatus.Slide), slideState},
             
-            {new Transition(wallRideState, PlayerStatus.OffWall), inAirState},
+            {new Transition(wallRideState, PlayerStatus.InAir), inAirState},
             {new Transition(wallRideState, PlayerStatus.Grounded),  groundedState},
 
             {new Transition(slideState, PlayerStatus.InAir), inAirState}
@@ -144,7 +144,7 @@ public class StateMachine{
         
         Debug.Log(status);
 
-        if(!transitions.TryGetValue(new Transition(currentState, status), out nextState)){
+        if(!transitions.TryGetValue(newTransition, out nextState)){
             Debug.LogWarning("Transition non trouvée");
             return currentState;
         }
@@ -169,6 +169,5 @@ public enum PlayerStatus{
     Slide,
     SlideOff,
     OnWall,
-    OffWall,
     Sprint
 }

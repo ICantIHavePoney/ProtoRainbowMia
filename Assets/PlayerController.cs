@@ -19,6 +19,7 @@ public class PlayerController : MonoBehaviour {
 	[SerializeField]
 	private Animator animator;
 
+	[SerializeField]
 	private Transform mainCam;
 
 	private bool isWallRiding;
@@ -47,6 +48,8 @@ public class PlayerController : MonoBehaviour {
 
 	public float ratio = 0;
 
+	private float speedRatio = 0;
+
 	public float minHeight;
 
 	public float endHeight;
@@ -65,7 +68,7 @@ public class PlayerController : MonoBehaviour {
 		stateMachine = new StateMachine();
 		currentState = stateMachine.currentStateProperties;
 		cf = GetComponent<ConstantForce>();
-		mainCam = Camera.main.transform;
+		//mainCam = Camera.main.transform;
 		rb = GetComponent<Rigidbody>();
 		cf.force = new Vector3(0, rb.mass * currentState.GetGravity(), 0);
 	}
@@ -75,12 +78,12 @@ public class PlayerController : MonoBehaviour {
 
 		if (Input.GetAxis("Horizontal") != 0 || Input.GetAxis("Vertical") != 0){
 			isMoving = true;
-			ratio += Time.deltaTime  * 0.4f;
-			if(ratio >= 1){
-				ratio = 1;
+			speedRatio += Time.deltaTime  * 0.4f;
+			if(speedRatio >= 1){
+				speedRatio = 1;
 			}
 					animator.SetBool("isMoving", true);
-			currentSpeed = Mathf.Lerp(0, currentState.GetForwardForce(), ratio);
+			currentSpeed = Mathf.Lerp(0, currentState.GetForwardForce(), speedRatio);
 			newPos = transform.position + new Vector3(transform.forward.x, 0, transform.forward.z) * currentSpeed * Time.deltaTime;
 			newRot = new Vector3(0, mainCam.localEulerAngles.y + Mathf.Atan2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Mathf.Rad2Deg * currentState.GetLateralForce(), 0);
 		}
@@ -88,18 +91,18 @@ public class PlayerController : MonoBehaviour {
 			
 			
 			animator.SetBool("isMoving", false);
-			ratio -= Time.deltaTime  * 0.005f;
+			speedRatio -= Time.deltaTime  * 0.005f;
 		
-			if( ratio < 0.985f){
+			if( speedRatio < 0.985f){
 				isMoving = false;
-				ratio = 0;
+				speedRatio = 0;
 			}
-			currentSpeed = Mathf.Lerp(1, currentSpeed, ratio);
+			currentSpeed = Mathf.Lerp(1, currentSpeed, speedRatio);
 			newPos = transform.position + new Vector3(transform.forward.x, 0, transform.forward.z) * currentSpeed * Time.deltaTime;
 
 		}
 
-		animator.SetFloat("runVelocity", ratio);
+		animator.SetFloat("runVelocity", speedRatio);
 
 		if (Input.GetButtonDown("Jump") && canJump){
 			isJumping = true;
@@ -125,7 +128,6 @@ public class PlayerController : MonoBehaviour {
 			animator.SetBool("isBoosting", true);
 		}
 
-
 		if(Input.GetButtonUp("Fire3")){
 			if(previousState.GetStateType() == StateType.grounded){
 				currentState = stateMachine.SwitchState(PlayerStatus.Grounded);
@@ -140,8 +142,8 @@ public class PlayerController : MonoBehaviour {
 		if(isRiding){
 
 
-            Vector3 newPos = Vector3.zero;
-            bool lastSegment = currentRail.Slide(out newPos, ratio, angle);
+            Vector3 lerpPos = Vector3.zero;
+            bool lastSegment = currentRail.Slide(out lerpPos, ratio, angle);
             if (angle < 0)
             {
                 ratio -= Time.deltaTime * currentState.GetForwardForce() / currentRail.currentSegment.distance;
@@ -163,8 +165,9 @@ public class PlayerController : MonoBehaviour {
                 else
                 {
                     isRiding = false;
-					rb.AddForce(transform.forward * currentState.GetForwardForce() * rb.mass, ForceMode.Impulse);
 					isJumping = true;
+					rb.AddForce(transform.forward * currentState.GetForwardForce() * rb.mass, ForceMode.Impulse);
+					
                 }
             }
             if(ratio < 0  && angle < 0)
@@ -183,7 +186,7 @@ public class PlayerController : MonoBehaviour {
 					isJumping = true;
 				}
             }
-            transform.position = newPos;
+            transform.position = lerpPos;
 
 		}
 
@@ -196,6 +199,7 @@ public class PlayerController : MonoBehaviour {
 
         if (isJumping)
         {
+			isWallRiding = false;
 			rb.AddForce(transform.up * currentState.GetVerticalForce() * (rb.mass * 0.30f), ForceMode.Impulse);			
 			cf.force = Vector3.zero;
 			currentState = stateMachine.SwitchState(PlayerStatus.InAir);
@@ -220,6 +224,8 @@ public class PlayerController : MonoBehaviour {
 			animator.ResetTrigger("Jump");
 			animator.ResetTrigger("Fall");
 			animator.SetTrigger("Landed");
+
+			canJump = true;
 		if(other.transform.tag == "Floor" ){
 			
 			if(!Input.GetButton("Fire3")){
@@ -234,7 +240,7 @@ public class PlayerController : MonoBehaviour {
             }
 
 			
-			canJump = true;
+
 		}
 		else if(other.transform.tag == "Wall" && currentState.GetStateType() == StateType.inAir){
             angle = Vector3.Dot(transform.forward, other.transform.forward);
@@ -250,11 +256,13 @@ public class PlayerController : MonoBehaviour {
 					transform.rotation = Quaternion.Inverse(other.transform.rotation);
 				}
 
+
 				cf.force = new Vector3(cf.force.x, currentState.GetGravity() * rb.mass, cf.force.z);
 
 				rb.velocity = new Vector3(rb.velocity.x, rb.velocity.y * 0.25f, rb.velocity.z);
 
-				rb.AddForce(transform.forward * currentState.GetForwardForce() * rb.mass, ForceMode.Impulse);
+				rb.AddForce(transform.forward * currentState.GetForwardForce() * rb.mass, ForceMode.Impulse);			
+
 			}
 		}
 		else if(other.transform.tag == "Slide" && currentState.GetStateType() == StateType.inAir && !isRiding){
@@ -297,7 +305,7 @@ public class PlayerController : MonoBehaviour {
 	{
 		if(other.transform.tag == "Wall" && isWallRiding){
 			isWallRiding = false;
-			currentState = stateMachine.SwitchState(PlayerStatus.OffWall);
+			currentState = stateMachine.SwitchState(PlayerStatus.InAir);
  			cf.force = new Vector3(cf.force.x, currentState.GetGravity() * rb.mass, cf.force.z);
 
 		}	
