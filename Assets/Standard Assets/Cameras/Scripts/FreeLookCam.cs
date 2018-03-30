@@ -20,12 +20,15 @@ namespace UnityStandardAssets.Cameras
         [SerializeField] private float m_TiltMin = 45f;                       // The minimum value of the x axis rotation of the pivot.
         [SerializeField] private bool m_LockCursor = false;                   // Whether the cursor should be hidden and locked.
         [SerializeField] private bool m_VerticalAutoReturn = false;           // set wether or not the vertical axis should auto return
-        [SerializeField] private Transform basePosition;
 
         private float m_LookAngle;                    // The rig's y axis rotation.
         private float m_TiltAngle;                    // The pivot's x axis rotation.
+        private float angleLerpBuffer;
+        private float tiltLerpBuffer;
+        private bool beginLerp;
         private const float k_LookDistance = 100f;    // How far in front of the pivot the character's look target is.
 		private Vector3 m_PivotEulers;
+        private float ratio = 0;
 		private Quaternion m_PivotTargetRot;
 		private Quaternion m_TransformTargetRot;
 
@@ -49,15 +52,19 @@ namespace UnityStandardAssets.Cameras
                 HandleRotationMovement();
             }
             else{
-                m_LookAngle = 0f;
-                m_TiltAngle = 0f;
-                
-                m_PivotTargetRot = Quaternion.Euler(Target.rotation.x, m_PivotEulers.y, m_PivotEulers.z);
-                m_TransformTargetRot = Quaternion.Euler(0, Target.rotation.y, 0);
-                Debug.Log(m_TransformTargetRot);
-                m_Pivot.localRotation = Quaternion.Slerp(m_Pivot.localRotation, m_PivotTargetRot, m_TurnSpeed * Time.deltaTime);
-                transform.localRotation = Quaternion.Slerp(transform.localRotation, m_TransformTargetRot,  m_TurnSpeed * Time.deltaTime);
 
+
+                    m_LookAngle -= m_TurnSpeed * Time.deltaTime;
+                    m_TiltAngle += m_TurnSpeed * Time.deltaTime;
+                    m_PivotTargetRot = Quaternion.Euler(Target.rotation.x, m_PivotEulers.y, m_PivotEulers.z);
+                    m_TransformTargetRot = Quaternion.Euler(0f, Target.rotation.eulerAngles.y, 0f);
+                    m_Pivot.localRotation = Quaternion.Slerp(m_Pivot.localRotation, m_PivotTargetRot, m_TurnSpeed * Time.deltaTime);
+                    transform.localRotation = Quaternion.Slerp(transform.localRotation, m_TransformTargetRot, m_TurnSpeed * Time.deltaTime);
+                    m_LookAngle = Target.rotation.eulerAngles.y;
+                    m_TiltAngle = Target.rotation.eulerAngles.x;
+                
+
+      
             }
             if (m_LockCursor && Input.GetMouseButtonUp(0))
             {
