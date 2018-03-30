@@ -93,15 +93,20 @@ class Transition{
 [Serializable]
 public class StateMachine{
 
-    [SerializeField]
     private Dictionary<Transition, State> transitions;
+
+    public State groundedState = new State(-9.8f, 20,1,20,StateType.grounded, true);
+    public State inAirState = new State(-9.8f, 20, 0.5f, 0, StateType.inAir, true); 
+    public State wallRideState = new State(-2.5f, 20, 0, 15, StateType.wallRide, false);
+    public State boostState = new State(-9.8f, 40, 1, 10, StateType.boost, true);
+    public State slideState = new State(0, 20, 0, 20, StateType.slide, false);
+ 
 
     public State currentStateProperties {get{
         return currentState;
     } 
     private set{}}
 
-    [SerializeField]
     private State currentState;
 
     public StateMachine(){

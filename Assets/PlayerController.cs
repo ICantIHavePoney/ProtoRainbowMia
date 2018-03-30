@@ -119,9 +119,6 @@ public class PlayerController : MonoBehaviour {
 			}
 		}
 
-
-
-
 		if(Input.GetButtonDown("Fire3")){
 			previousState = currentState;
 			currentState = stateMachine.SwitchState(PlayerStatus.Sprint);
@@ -134,9 +131,7 @@ public class PlayerController : MonoBehaviour {
 				currentState = stateMachine.SwitchState(PlayerStatus.Grounded);
 				animator.SetBool("isBoosting", false);
 			}
-		}
-		
-
+		}	
     }
 
 	void FixedUpdate()
@@ -167,9 +162,9 @@ public class PlayerController : MonoBehaviour {
                 }
                 else
                 {
+                    isRiding = false;
 					rb.AddForce(transform.forward * currentState.GetForwardForce() * rb.mass, ForceMode.Impulse);
 					isJumping = true;
-                    isRiding = false;
                 }
             }
             if(ratio < 0  && angle < 0)
@@ -222,6 +217,9 @@ public class PlayerController : MonoBehaviour {
 
 	private void OnCollisionEnter(Collision other)
 	{
+			animator.ResetTrigger("Jump");
+			animator.ResetTrigger("Fall");
+			animator.SetTrigger("Landed");
 		if(other.transform.tag == "Floor" ){
 			
 			if(!Input.GetButton("Fire3")){
@@ -234,9 +232,7 @@ public class PlayerController : MonoBehaviour {
                 cf.force = new Vector3(cf.force.x, currentState.GetGravity() * rb.mass, cf.force.z);
                 isWallRiding = false;
             }
-			animator.ResetTrigger("Jump");
-			animator.ResetTrigger("Fall");
-			animator.SetTrigger("Landed");
+
 			
 			canJump = true;
 		}
@@ -278,7 +274,7 @@ public class PlayerController : MonoBehaviour {
             cf.force = Vector3.zero;
 
             if (angle >=  0){
-
+				ratio = 0;
                 currentRail.movable.position = transform.position;
                 currentRail.currentSegment.firstEndPoint = currentRail.movable;
 
@@ -296,13 +292,6 @@ public class PlayerController : MonoBehaviour {
             isRiding = true;
         }
 	}
-
-
-	private void OnTriggerEnter(Collider other)
-	{
-
-	}
-
 
 	private void OnCollisionExit(Collision other)
 	{
