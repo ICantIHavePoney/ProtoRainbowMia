@@ -46,9 +46,9 @@ public class PlayerController : MonoBehaviour {
 
 	public float angle = 0;
 
-	public float ratio = 0;
+	private float ratio = 0;
 
-	private float speedRatio = 0;
+	public float speedRatio = 0;
 
 	public float minHeight;
 
@@ -85,7 +85,7 @@ public class PlayerController : MonoBehaviour {
 					animator.SetBool("isMoving", true);
 			currentSpeed = Mathf.Lerp(0, currentState.GetForwardForce(), speedRatio);
 			newPos = transform.position + new Vector3(transform.forward.x, 0, transform.forward.z) * currentSpeed * Time.deltaTime;
-			newRot = new Vector3(0, mainCam.localEulerAngles.y + Mathf.Atan2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Mathf.Rad2Deg * currentState.GetLateralForce(), 0);
+			newRot = new Vector3(0, mainCam.rotation.eulerAngles.y + Mathf.Atan2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical")) * Mathf.Rad2Deg * currentState.GetLateralForce(), 0);
 		}
 		else if((Input.GetAxis("Horizontal") == 0 && Input.GetAxis("Vertical") == 0) && isMoving){
 			
@@ -193,7 +193,8 @@ public class PlayerController : MonoBehaviour {
         if(isMoving && currentState.GetCanControl()){
 
             transform.rotation = Quaternion.Euler(newRot);
-            rb.MovePosition(newPos);
+            transform.position = newPos;
+			//rb.MovePosition(newPos);
 		}
 
 
