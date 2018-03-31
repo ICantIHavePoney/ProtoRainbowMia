@@ -64,7 +64,7 @@ public class PlayerController : MonoBehaviour {
 
 	// Use this for initialization
 	void Start () {
-		endHeight = 100000000000000f;
+		endHeight = transform.position.y + maxHeightOffset;
 		stateMachine = new StateMachine();
 		currentState = stateMachine.currentStateProperties;
 		cf = GetComponent<ConstantForce>();
@@ -112,6 +112,7 @@ public class PlayerController : MonoBehaviour {
 			animator.ResetTrigger("Landed");
 			minHeight = transform.position.y + minHeightOffset;
 			endHeight = transform.position.y + maxHeightOffset;
+			startHeight = transform.position.y;
 
 		}
 
@@ -140,7 +141,6 @@ public class PlayerController : MonoBehaviour {
 	{
 
 		if(isRiding){
-
 
             Vector3 lerpPos = Vector3.zero;
             bool lastSegment = currentRail.Slide(out lerpPos, ratio, angle);
@@ -187,14 +187,12 @@ public class PlayerController : MonoBehaviour {
 				}
             }
             transform.position = lerpPos;
-
 		}
 
         if(isMoving && currentState.GetCanControl()){
 
             transform.rotation = Quaternion.Euler(newRot);
             transform.position = newPos;
-			//rb.MovePosition(newPos);
 		}
 
 
@@ -205,17 +203,18 @@ public class PlayerController : MonoBehaviour {
 			cf.force = Vector3.zero;
 			currentState = stateMachine.SwitchState(PlayerStatus.InAir);
 			isJumping = false;
-
         }
 
-		if(transform.position.y / endHeight * 100f >= 80){
+
+		if(transform.position.y >= endHeight * .8f){
 			if(cf.force == Vector3.zero){
 				cf.force = Vector3.up * currentState.GetGravity() * rb.mass;
 			}
+			if(endHeight - minHeight > float.Epsilon){
+				Debug.Log("toto");
+				animator.SetTrigger("Fall");
+			}
 			rb.AddForce(Vector3.down, ForceMode.Acceleration);
-		}
-		if(transform.position.y / endHeight * 100f >= 80 && endHeight != minHeight){
-			animator.SetTrigger("Fall");
 		}
 	}
 
@@ -224,11 +223,9 @@ public class PlayerController : MonoBehaviour {
 	{
 			animator.ResetTrigger("Jump");
 			animator.ResetTrigger("Fall");
-			animator.SetTrigger("Landed");
-
 			canJump = true;
 		if(other.transform.tag == "Floor" ){
-			
+			animator.SetTrigger("Landed");
 			if(!Input.GetButton("Fire3")){
 				currentState = stateMachine.SwitchState(PlayerStatus.Grounded);
 			}
@@ -239,14 +236,13 @@ public class PlayerController : MonoBehaviour {
                 cf.force = new Vector3(cf.force.x, currentState.GetGravity() * rb.mass, cf.force.z);
                 isWallRiding = false;
             }
-
-			
-
 		}
 		else if(other.transform.tag == "Wall" && currentState.GetStateType() == StateType.inAir){
             angle = Vector3.Dot(transform.forward, other.transform.forward);
 
             if (Mathf.Abs(angle) > 0.5f && Input.GetButton("Jump") && !isWallRiding){
+				animator.SetTrigger("WallRide");
+				animator.ResetTrigger("Jump");
 				isWallRiding = true;
 				currentState = stateMachine.SwitchState(PlayerStatus.OnWall);
 
@@ -255,7 +251,7 @@ public class PlayerController : MonoBehaviour {
 				}
 				else{
 					transform.rotation = Quaternion.Inverse(other.transform.rotation);
-				}
+				} 
 
 
 				cf.force = new Vector3(cf.force.x, currentState.GetGravity() * rb.mass, cf.force.z);
@@ -310,6 +306,12 @@ public class PlayerController : MonoBehaviour {
  			cf.force = new Vector3(cf.force.x, currentState.GetGravity() * rb.mass, cf.force.z);
 
 		}	
+		else if(other.transform.tag == "Floor"){
+			currentState = stateMachine.SwitchState(PlayerStatus.InAir);
+			animator.ResetTrigger("Landed");
+
+		}
+
 	}
 
 }
